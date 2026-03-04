@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Contoh Soal TKA 2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,sans-serif;}
+body{background:#0f172a;color:white;min-height:100vh;display:flex;flex-direction:column;}
+header{background:#111827;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;font-weight:bold;font-size:20px;box-shadow:0 4px 15px rgba(0,0,0,0.4);}
+.timer{color:#22c55e;font-weight:bold;}
+.timer.warning{color:#ef4444;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.4;}}
+main{flex:1;padding:20px;display:flex;justify-content:center;align-items:flex-start;flex-direction:column;}
+.container{max-width:1000px;margin:0 auto;width:100%;background:#1f2937;padding:25px;border-radius:20px;box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+input, select{width:100%;padding:12px;margin-bottom:15px;border-radius:10px;border:1px solid #334155;background:#111827;color:white;font-size:16px;}
+button{padding:14px;border:none;border-radius:12px;background:#2563eb;color:white;font-weight:bold;cursor:pointer;font-size:16px;transition:0.2s;width:100%;}
+button:hover{background:#1d4ed8;}
+.question-box{background:#1e293b;padding:20px;border-radius:20px;margin-bottom:20px;animation:fade 0.3s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.option{background:#334155;padding:12px;margin:10px 0;border-radius:12px;cursor:pointer;transition:0.2s;font-size:16px;}
+.option:hover{background:#2563eb;}
+.option.selected{background:#22c55e;color:white;}
+.buttons{display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;}
+.progress-bar{height:10px;background:#334155;border-radius:12px;overflow:hidden;margin-top:20px;}
+.progress{height:100%;background:#22c55e;width:0%;transition:0.3s;}
+.progress-text{margin-top:6px;font-size:14px;text-align:right;}
+.nav-grid{margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(35px,1fr));gap:6px;}
+.nav-grid div{background:#334155;padding:8px;text-align:center;border-radius:8px;cursor:pointer;font-size:14px;}
+.nav-grid .answered{background:#22c55e;}
+.rank-card{background:#111827;padding:15px;border-radius:15px;box-shadow:0 4px 12px rgba(0,0,0,0.3);margin-top:20px;}
+.rank-card h3{text-align:center;margin-bottom:10px;}
+@media(max-width:600px){
+  header{flex-direction:column;align-items:flex-start;font-size:18px;}
+  .buttons{flex-direction:column;}
+  .option{font-size:14px;padding:10px;}
+  input, select{font-size:14px;padding:10px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+<div>Contoh Soal TKA 2026</div>
+<div class="timer" id="timer"></div>
+</header>
+
+<main>
+<div class="container" id="mainBox">
+<h2 style="text-align:center;margin-bottom:20px;">Login Peserta</h2>
+<input type="text" id="nama" placeholder="Masukkan Nama" maxlength="30">
+<select id="level">
+<option value="">Pilih Jenjang</option>
+<option value="SD">TKA SD</option>
+<option value="SMP">TKA SMP</option>
+</select>
+<button onclick="startQuiz()">Mulai</button>
+
+<div class="rank-card">
+<h3>🏆 Ranking Top 5</h3>
+<div id="rankList"></div>
+</div>
+</div>
+</main>
+
+<script>
+// === HELPERS ===
+function sanitize(str){return str.replace(/[<>"'/]/g,'');}
+function isValidName(name){return name.trim().length>0 && name.trim().length<=30;}
+function shuffle(arr){return arr.sort(()=>Math.random()-0.5);}
+
+// === VARIABLES ===
+let questions=[], answers=[], current=0, timeLeft=3600, timerInterval;
+let username="", level="";
+let bankSD=[], bankSMP=[];
+
+// === GENERATE SOAL NYATA ===
+function generateSoalNyata(){
+  for(let i=1;i<=100;i++){
+    // SD
+    bankSD.push({question:`MTK SD ${i}: Jika ${i} + ${i*2} = ?`,options:shuffle([i*3,i*3+1,i*3-1,i*3+2].map(String)),answer:0});
+    bankSD.push({question:`B.Indonesia SD ${i}: Pilih kata yang tepat "Saya ___ buku di perpustakaan."`,options:shuffle(["membaca","membacakan","membacai","membacakanlah"]),answer:0});
+    // SMP
+    bankSMP.push({question:`MTK SMP ${i}: Seorang siswa membeli ${i} buku, temannya membeli ${i*2} buku, total buku?`,options:shuffle([i*3,i*3+1,i*3-1,i*3+2].map(String)),answer:0});
+    bankSMP.push({question:`B.Indonesia SMP ${i}: Pilih sinonim kata "cerdas" dalam kalimat "Dia sangat ___ dalam pelajaran."`,options:shuffle(["pandai","bodoh","malas","lambat"]),answer:0});
+  }
+}
+generateSoalNyata();
+
+// === RANKING ===
+function loadRanking(){
+let data=JSON.parse(localStorage.getItem("ranking")||"[]");
+data.sort((a,b)=>b.score-a.score);
+let list=document.getElementById("rankList");
+if(!list) return;
+list.innerHTML="";
+data.slice(0,5).forEach((d,i)=>{list.innerHTML+=`${i+1}. ${sanitize(d.name)} - ${d.score}<br>`;});
+}
+loadRanking();
+function saveScore(name,score){
+let data=JSON.parse(localStorage.getItem("ranking")||"[]");
+data.push({name:sanitize(name),score});
+localStorage.setItem("ranking",JSON.stringify(data));
+}
+
+// === START QUIZ ===
+function startQuiz(){
+let n=document.getElementById("nama").value;
+let l=document.getElementById("level").value;
+if(!isValidName(n)){alert("Nama tidak valid!");return;}
+if(l===""){alert("Pilih jenjang!");return;}
+username=sanitize(n); level=l;
+questions=shuffle(level==="SD"?bankSD:bankSMP);
+answers=new Array(questions.length).fill(null);
+current=0; timeLeft=3600;
+
+// render quiz
+document.getElementById("mainBox").innerHTML=`
+<div class="question-box">
+<div id="question"></div>
+<div id="options"></div>
+<div class="buttons">
+<button onclick="prevQuestion()">Prev</button>
+<button onclick="nextQuestion()">Next</button>
+<button onclick="submitQuiz()">Submit</button>
+</div>
+<div class="progress-bar"><div class="progress" id="progress"></div></div>
+<div class="progress-text" id="progressText"></div>
+</div>
+<div class="nav-grid" id="navGrid"></div>
+`;
+
+createNav(); loadQuestion(); startTimer();
+}
+
+// === TIMER ===
+function startTimer(){
+updateTimer();
+timerInterval=setInterval(()=>{
+timeLeft--;
+updateTimer();
+if(timeLeft<=0){submitQuiz();}
+},1000);
+}
+function updateTimer(){
+let m=Math.floor(timeLeft/60),s=timeLeft%60;
+let el=document.getElementById("timer");
+el.innerText="Waktu: "+m+":"+(s<10?"0"+s:s);
+if(timeLeft<=300){el.classList.add("warning");}else{el.classList.remove("warning");}
+}
+
+// === LOAD & NAV ===
+function loadQuestion(){
+document.getElementById("question").innerText=questions[current].question;
+let optDiv=document.getElementById("options"); optDiv.innerHTML="";
+questions[current].options.forEach((opt,i)=>{
+let btn=document.createElement("div");
+btn.className="option"; btn.innerText=opt;
+if(answers[current]===i) btn.classList.add("selected");
+btn.onclick=()=>{answers[current]=i;loadQuestion();updateNav();};
+optDiv.appendChild(btn);
+});
+let percent=Math.round((current+1)/questions.length*100);
+document.getElementById("progress").style.width=percent+"%";
+document.getElementById("progressText").innerText=`Soal ${current+1} / ${questions.length} (${percent}%)`;
+updateNav();
+}
+function createNav(){
+let grid=document.getElementById("navGrid");
+for(let i=0;i<questions.length;i++){
+let box=document.createElement("div");
+box.innerText=i+1;
+box.onclick=()=>{current=i;loadQuestion();}
+grid.appendChild(box);}
+}
+function updateNav(){
+let boxes=document.querySelectorAll(".nav-grid div");
+boxes.forEach((b,i)=>{b.classList.remove("answered");if(answers[i]!==null)b.classList.add("answered");});
+}
+function nextQuestion(){if(current<questions.length-1){current++;loadQuestion();}}
+function prevQuestion(){if(current>0){current--;loadQuestion();}}
+
+// === SUBMIT ===
+function submitQuiz(){
+if(!confirm("Yakin mau submit?")) return;
+clearInterval(timerInterval);
+let score=0; for(let i=0;i<questions.length;i++){if(answers[i]===questions[i].answer)score++;}
+saveScore(username,score);
+document.body.innerHTML=`
+<h1 style="text-align:center;margin-top:50px;">SELESAI<br>
+Nama: ${username}<br>
+Jenjang: ${level}<br>
+Skor: ${score}/${questions.length}</h1>
+<button style="margin:20px auto;display:block;padding:10px 20px;" onclick="window.print()">Cetak Sertifikat</button>
+<button style="margin:10px auto;display:block;padding:10px 20px;" onclick="location.reload()">Ulangi</button>`;
+loadRanking();
+}
+</script>
+
+</body>
+  </html>
