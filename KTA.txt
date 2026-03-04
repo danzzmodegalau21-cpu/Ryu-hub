@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latihan Soal KTA 2026 - Gacor</title>
+
+<style>
+:root {
+  --bg1: #4e73df;
+  --bg2: #1cc88a;
+  --card: white;
+  --text: black;
+}
+
+.dark {
+  --bg1: #1e1e2f;
+  --bg2: #121212;
+  --card: #2c2c3a;
+  --text: white;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  transition: 0.3s;
+}
+
+.container {
+  background: var(--card);
+  color: var(--text);
+  padding: 25px;
+  width: 380px;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+
+h2 { text-align: center; }
+
+.option {
+  margin: 8px 0;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #4e73df;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover { opacity: 0.8; }
+
+.progress {
+  height: 8px;
+  background: #ddd;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #1cc88a;
+  transition: 0.3s;
+}
+
+.timer {
+  text-align: right;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.toggle {
+  background: #333;
+  font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>KTA 2026</h2>
+
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="timer">⏳ Waktu: <span id="time">15</span>s</div>
+
+  <p id="question"></p>
+  <div id="options"></div>
+
+  <button onclick="nextQuestion()">Next</button>
+  <button class="toggle" onclick="toggleMode()">🌙 Toggle Mode</button>
+
+  <div id="result"></div>
+</div>
+
+<script>
+const questions = [
+  {
+    question: "1. Apa kepanjangan dari KTA?",
+    options: ["Kartu Tanda Anggota", "Kartu Tugas Akhir", "Kartu Tanda Aman", "Kartu Tes Akademik"],
+    answer: 0
+  },
+  {
+    question: "2. 20 x 2 = ?",
+    options: ["20", "30", "40", "50"],
+    answer: 2
+  },
+  {
+    question: "3. Tahun pelaksanaan KTA 2026?",
+    options: ["2024", "2025", "2026", "2027"],
+    answer: 2
+  }
+];
+
+let current = 0;
+let score = 0;
+let timeLeft = 15;
+let timer;
+
+function loadQuestion() {
+  const q = questions[current];
+  document.getElementById("question").innerText = q.question;
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  q.options.forEach((opt, i) => {
+    optionsDiv.innerHTML += `
+      <div class="option">
+        <input type="radio" name="answer" value="${i}"> ${opt}
+      </div>
+    `;
+  });
+
+  updateProgress();
+  startTimer();
+}
+
+function nextQuestion() {
+  clearInterval(timer);
+
+  const selected = document.querySelector('input[name="answer"]:checked');
+  if (selected && parseInt(selected.value) === questions[current].answer) {
+    score++;
+  }
+
+  current++;
+
+  if (current < questions.length) {
+    loadQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  document.querySelector(".container").innerHTML = `
+    <h2>🎉 Selesai!</h2>
+    <h3>Skor kamu: ${score} / ${questions.length}</h3>
+    <button onclick="restart()">Ulangi</button>
+  `;
+}
+
+function restart() {
+  current = 0;
+  score = 0;
+  timeLeft = 15;
+  location.reload();
+}
+
+function updateProgress() {
+  let percent = (current / questions.length) * 100;
+  document.getElementById("progressBar").style.width = percent + "%";
+}
+
+function startTimer() {
+  timeLeft = 15;
+  document.getElementById("time").innerText = timeLeft;
+  timer = setInterval(() => {
+    timeLeft--;
+    document.getElementById("time").innerText = timeLeft;
+    if (timeLeft <= 0) {
+      nextQuestion();
+    }
+  }, 1000);
+}
+
+function toggleMode() {
+  document.body.classList.toggle("dark");
+}
+
+loadQuestion();
+</script>
+
+</body>
+</html>
