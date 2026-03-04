@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contoh Soal TKA 2026</title>
+<style>
+body { font-family: Arial, sans-serif; background:#1a1a2e; color:#fff; margin:0; padding:0;}
+.container { max-width:900px; margin:20px auto; padding:20px; background:#162447; border-radius:10px;}
+input, select, button { padding:10px; margin:5px 0; border-radius:5px; border:none; font-size:16px;}
+button { background:#fca311; color:#000; cursor:pointer;}
+button:hover { background:#ffba08; }
+.hidden { display:none; }
+.quiz-header { display:flex; justify-content:space-between; align-items:center; }
+.timer { font-weight:bold; color:#43aa8b; }
+.grid { display:grid; grid-template-columns:repeat(10,1fr); gap:5px; margin-top:10px;}
+.grid button { background:#1f4068; color:#fff; font-size:12px; }
+.grid button.completed { background:#43aa8b; }
+hr { border:1px solid #fca311; margin:20px 0; }
+.mapel-dashboard button { margin:5px; background:#1f4068; color:#fff; padding:10px; border-radius:8px; cursor:pointer; }
+.mapel-dashboard button:hover { background:#43aa8b; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="container" id="loginScreen">
+  <h2>Login Peserta</h2>
+  <input type="text" id="nama" placeholder="Nama Peserta"><br>
+  <select id="level">
+    <option value="SD">TKA SD</option>
+    <option value="SMP">TKA SMP</option>
+  </select><br>
+  <button onclick="startQuiz()">Mulai</button>
+</div>
+
+<!-- PEMISAH MAPEL -->
+<div class="container hidden" id="mapelScreen">
+  <h2>Mapel Selanjutnya</h2>
+  <div class="mapel-dashboard" id="mapelButtons"></div>
+</div>
+
+<!-- QUIZ -->
+<div class="container hidden" id="quizScreen">
+  <div class="quiz-header">
+    <div id="mapelTitle"></div>
+    <div class="timer" id="timer">60:00</div>
+  </div>
+  <hr>
+  <div id="dashboardSkip" class="grid"></div>
+  <div id="soalContainer"></div>
+  <div style="margin-top:10px;">
+    <button onclick="prevSoal()">Prev</button>
+    <button onclick="nextSoal()">Next</button>
+    <button onclick="submitMapel()">Submit Mapel</button>
+  </div>
+</div>
+
+<!-- HASIL -->
+<div class="container hidden" id="resultScreen">
+  <h2>Hasil Quiz</h2>
+  <div id="resultText"></div>
+  <button onclick="restartQuiz()">Restart</button>
+</div>
+
+<script>
+// ===== GENERATE 100 SOAL PER MAPEL =====
+function generateSoal(level,mapel){
+  let soalArr=[];
+  for(let i=1;i<=100;i++){
+    if(mapel==="MTK"){
+      if(level==="SD"){
+        soalArr.push({ soal:`${i}. Hitung: ${i}+${i+1}=?`, jawaban:`${i+i+1}`, pilihan:[`${i+i}`,`${i+i+1}`,`${i+i+2}`,`${i+i+3}`]});
+      } else { // SMP
+        soalArr.push({ soal:`${i}. Hitung: ${i*2} x ${i+3}=?`, jawaban:`${i*2*(i+3)}`, pilihan:[`${i*2*(i+3)-1}`,`${i*2*(i+3)}`,`${i*2*(i+3)+1}`,`${i*2*(i+3)+2}`]});
+      }
+    } else { // BINDO
+      if(level==="SD"){
+        soalArr.push({ soal:`${i}. Pilih kata tepat: Saya ___ buku`, jawaban:"membaca", pilihan:["membaca","membacai","membacakan","membacakanlah"]});
+      } else {
+        soalArr.push({ soal:`${i}. Pilih kata tepat: Mereka ___ ke sekolah`, jawaban:"pergi", pilihan:["pergi","pergai","pergian","pergilah"]});
+      }
+    }
+  }
+  return soalArr;
+}
+
+// ===== DATA =====
+const soalData = {
+  SD: { MTK: generateSoal("SD","MTK"), BINDO: generateSoal("SD","BINDO") },
+  SMP: { MTK: generateSoal("SMP","MTK"), BINDO: generateSoal("SMP","BINDO") }
+};
+
+// ===== VAR =====
+let peserta="", level="", mapelList=[], mapelIndex=0;
+let soalIndex=0, userJawaban=[];
+let currentSoalSet=[];
+let timerInterval;
+
+// ===== START QUIZ =====
+function startQuiz(){
+  peserta = document.getElementById("nama").value.trim();
+  level = document.getElementById("level").value;
+  if(!peserta){ alert("Masukkan nama!"); return; }
+  document.getElementById("loginScreen").classList.add("hidden");
+  mapelList = Object.keys(soalData[level]);
+  mapelIndex=0;
+  userJawaban = Array(mapelList.length).fill().map(()=>[]);
+  showMapelScreen();
+}
+
+// ===== DASHBOARD MAPEL =====
+function showMapelScreen(){
+  document.getElementById("mapelScreen").classList.remove("hidden");
+  document.getElementById("quizScreen").classList.add("hidden");
+  const container = document.getElementById("mapelButtons");
+  container.innerHTML="";
+  mapelList.forEach((mapel,i)=>{
+    if(i===mapelIndex){
+      const btn = document.createElement("button");
+      btn.textContent = `Mulai ${mapel}`;
+      btn.onclick = ()=>{startMapel(i);}
+      container.appendChild(btn);
+    }
+  });
+}
+
+// ===== START MAPEL =====
+function startMapel(index){
+  mapelIndex=index;
+  currentSoalSet = soalData[level][mapelList[mapelIndex]];
+  soalIndex=0;
+  document.getElementById("mapelScreen").classList.add("hidden");
+  document.getElementById("quizScreen").classList.remove("hidden");
+  startTimer(60*60);
+  renderDashboard();
+}
+
+// ===== TIMER =====
+function startTimer(seconds){
+  clearInterval(timerInterval);
+  const timerEl = document.getElementById("timer");
+  timerInterval=setInterval(()=>{
+    const min = Math.floor(seconds/60).toString().padStart(2,'0');
+    const sec = (seconds%60).toString().padStart(2,'0');
+    timerEl.textContent = `${min}:${sec}`;
+    if(seconds<=0){ clearInterval(timerInterval); submitMapel(); }
+    seconds--;
+  },1000);
+}
+
+// ===== DASHBOARD NOMOR SOAL =====
+function renderDashboard(){
+  document.getElementById("mapelTitle").textContent = mapelList[mapelIndex];
+  const dashboard = document.getElementById("dashboardSkip");
+  dashboard.innerHTML = "";
+  currentSoalSet.forEach((_,i)=>{
+    const btn = document.createElement("button");
+    btn.textContent=i+1;
+    if(userJawaban[mapelIndex][i]) btn.classList.add("completed");
+    btn.onclick = ()=>{ soalIndex=i; renderSoal();}
+    dashboard.appendChild(btn);
+  });
+  renderSoal();
+}
+
+// ===== RENDER SOAL =====
+function renderSoal(){
+  const soal = currentSoalSet[soalIndex];
+  const container = document.getElementById("soalContainer");
+  container.innerHTML = `<h3>${soal.soal}</h3>`+
+    soal.pilihan.map(p=>`<div><input type="radio" name="jawaban" value="${p}" ${userJawaban[mapelIndex][soalIndex]===p?'checked':''}> ${p}</div>`).join('');
+  updateDashboardHighlight();
+}
+
+// ===== UPDATE HIGHLIGHT NOMOR SOAL =====
+function updateDashboardHighlight(){
+  const dashboard = document.getElementById("dashboardSkip");
+  Array.from(dashboard.children).forEach((btn,i)=>{
+    if(userJawaban[mapelIndex][i]) btn.classList.add("completed");
+    else btn.classList.remove("completed");
+  });
+}
+
+// ===== NAVIGASI =====
+function nextSoal(){ saveJawaban(); if(soalIndex<currentSoalSet.length-1){soalIndex++; renderSoal();} }
+function prevSoal(){ saveJawaban(); if(soalIndex>0){soalIndex--; renderSoal();} }
+function saveJawaban(){
+  const selected=document.querySelector('input[name="jawaban"]:checked');
+  if(selected) userJawaban[mapelIndex][soalIndex]=selected.value;
+}
+
+// ===== SUBMIT MAPEL =====
+function submitMapel(){
+  saveJawaban();
+  clearInterval(timerInterval);
+  mapelIndex++;
+  if(mapelIndex<mapelList.length){ showMapelScreen(); }
+  else{ showResult(); }
+}
+
+// ===== HASIL =====
+function showResult(){
+  document.getElementById("quizScreen").classList.add("hidden");
+  document.getElementById("mapelScreen").classList.add("hidden");
+  const resultScreen=document.getElementById("resultScreen");
+  resultScreen.classList.remove("hidden");
+  let html = `<h3>${peserta}</h3>`;
+  mapelList.forEach((mapel,i)=>{
+    const soalSet = soalData[level][mapel];
+    let score = soalSet.reduce((acc,s,j)=> acc + (userJawaban[i][j]===s.jawaban?1:0),0);
+    html+= `<p>${mapel}: ${score}/${soalSet.length}</p>`;
+  });
+  document.getElementById("resultText").innerHTML=html;
+}
+
+// ===== RESTART =====
+function restartQuiz(){
+  document.getElementById("resultScreen").classList.add("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  userJawaban = [];
+}
+</script>
+
+</body>
+  </html>
